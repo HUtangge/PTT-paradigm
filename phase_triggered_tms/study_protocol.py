@@ -171,18 +171,28 @@ def start(verbose:bool = False):
     if protocol:
         question = "Do you want to repeat the last condition?"
         if ask_user_yes_no_question(question):
-            """Load old condition"""
+            """Load condition which has been stimulated last"""
+            condition_idx = protocol[-1]['condition_idx']
+            condition = cfg.conditions[condition_idx]
 
-
+            """ToDo: Ask operator if they want to continue from a specific stim idx"""
+            stim_number = 42
         else:
-            """Create new condition"""
-            condition = random_condition(conditions)
+            """Select condition which as not been stimulated before"""
+            already_stimulated_conditions = set([x['condition_idx'] for x in load_list(protocol_path)])
+            conditions_idx_not_done = list(set(range(0,len(cfg.conditions)))-already_stimulated_conditions)
+            conditions_not_done = [cfg.conditions[condition_idx] for condition_idx in conditions_idx_not_done]
+            condition = random_condition(conditions_not_done) # select a condition
+            stim_number = 0
 
     else:
-        """Create new condition"""
+        """Select random condition"""
         create_new_condition = True
-        condition = random_condition(conditions)
-        protocol_attempt(condition['index'], protocol_path, subject_token)
+        condition = random_condition(cfg.conditions)
+        stim_number = 0
+
+    """Protocol that the condition has been stimulated"""
+    protocol_attempt(condition['index'], protocol_path, stim_number)
 
     """If there was previous experiment, ask user if want to repeat"""
 

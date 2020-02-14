@@ -132,11 +132,12 @@ def ask_user_yes_no_question(question:str):
             return False
         else:
             print("Please type a valid answer")
+
 def ask_user_for_stimulation_idx():
     while True:
         try:
             start_index = int(input("Please enter the start_index: "))
-            if start_index >=0 and start_index <= len(cfg.number_of_PVT_per_phase+cfg.number_of_TMS_per_phase)-1:
+            if start_index >=0 and start_index <= cfg.number_of_PVT+cfg.number_of_TMS-1:
                 break
             else:
                 print("Index out of range!")

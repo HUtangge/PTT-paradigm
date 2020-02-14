@@ -53,8 +53,8 @@ conditions = [{'index': 0,
 
 recordings_path = 'C:\\recordings\\TG_NK_TMS_study\\'
 
-number_of_PVT_per_phase = 60
-number_of_TMS_per_phase = 300
+number_of_PVT = 60
+number_of_TMS = 300
 
 run_length = 100
 

@@ -9,9 +9,6 @@ Modified on Wed Nov 27 16:20:29 2019
 by: Tang Ge
 
 """
-
-import sys
-sys.path.append('C:\\Users\\Messung\\Desktop\\tangge\\study_protocol')
 import reiz
 import random
 import time
@@ -22,7 +19,7 @@ from luckyloop.client import LuckyClient
 from luckyloop.mock import mock
 #from arduino import sandy
 from localite.api import Coil
-import study_config as cfg
+from phase_triggered_tms import study_config as cfg
 from reiz.marker import push
 from reiz import Canvas
 from reiz.visual import Mural, library
@@ -30,14 +27,9 @@ from liesl.streams import localhostname
 from liesl.files.session import Session, Recorder
 from reiz.audio import Message
 import re
+import pickle
 
-protocol_file_name = "protocol.json"
-
-# %% mock stream for lucky loop
-server = mock()
-server.await_running()
-
-#%%
+protocol_file_name = "protocol.list"
 
 def countdown(canvas, sek):
     for i in range(0,sek):
@@ -58,12 +50,9 @@ def random_time(min, max):
 
 def random_condition(conditions):
     """Get a randomized condition"""
-    conditions_idx = list(range(0, 10, 1))
-    condition = conditions[condition_idx]
-    frequencies_to_stimulate = condition[1]
-    phases_to_stimulate = condition[2]
-    intensity_to_stimulate = condition[0]
-    return condition_idx, frequencies_to_stimulate, phases_to_stimulate, intensity_to_stimulate
+    conditions_idx = random.randint(0,len(conditions)-1)
+    condition = conditions[conditions_idx]
+    return condition
 
 def random_condition2(conditions, subject):
     """Get a randomized condition"""
@@ -122,15 +111,41 @@ def load_dict(path:str) -> dict:
     except FileNotFoundError:
         return False
 
+def save_list(path:str, list_to_save:list):
+    with open(path, "wb") as fp:
+        pickle.dump(list_to_save, fp)
+
+def load_list(path:str) -> list:
+    try:
+        with open(path, "rb") as fp:
+            loaded_list = pickle.load(fp)
+            return loaded_list
+    except FileNotFoundError:
+        return False
+
 def ask_user_yes_no_question(question:str):
     while True:
         answer = input(f"{question}(y/n):")
-        if answer = "y":
+        if answer == "y":
             return True
-        elif answer = "n":
+        elif answer == "n":
             return False
         else:
             print("Please type a valid answer")
+
+def protocol_attempt(condition_idx:int, protocol_path:str, stim_number:int = 0):
+    """Protocols an attempt with the stimulated index and stim_number in stim list"""
+    condition_dict = {'condition_idx': condition_idx,
+                     'stim_number': stim_number,
+                     'time': time.time()}
+    protocol = load_list(protocol_path)
+
+    if protocol:
+        protocol = load_list(protocol_path)
+        protocol.append(condition_dict)
+    else:
+        protocol = [condition_dict]
+    save_list(protocol_path, protocol)
 
 #%%
 def start(verbose:bool = False):
@@ -140,29 +155,39 @@ def start(verbose:bool = False):
     RMT = get_RMT(max_percent_RMT = 120)
 
     """Check if there are old conditions"""
-    protocol = load_dict(f"{subject_folder}{protocol_file_name}")
+    protocol_path = f"{subject_folder}{protocol_file_name}"
+    protocol = load_list(protocol_path)
     if protocol:
         question = "Do you want to repeat the last condition?"
         if ask_user_yes_no_question(question):
             """Load old condition"""
+
+
         else:
             """Create new condition"""
+            condition = random_condition(conditions)
+
     else:
         """Create new condition"""
-        random_condition(conditions)
-
+        create_new_condition = True
+        condition = random_condition(conditions)
+        protocol_attempt(condition['index'], protocol_path, subject_token)
 
     """If there was previous experiment, ask user if want to repeat"""
 
     """If want to repeakt ask for stimulation index"""
     => a condition + stimulation index to start
+
     """Save the condition"""
     condition_order_directory = cfg.recordings_path+"sub-"+subject_token+'\\condition_%s\\config\\' % condition_idx
     condition_order_file_path = condition_order_directory+'config.json'
 
     """Check if all streams are available"""
     streamargs = [{'name':"localite_marker"},   # comments: make a real list
-                  {'name':"reiz-marker"}]
+                  {'name':"reiz-marker"},
+                  {'name':"localite_marker"},
+                  {'name':"eego"},
+                  {'name':"GDX-RB_0K2002A1"}]
 
     session = Session(prefix=subject_token,
                       streamargs=streamargs)
@@ -175,19 +200,22 @@ def start(verbose:bool = False):
     print(f"Stimulation intensity {stimulation_intensity}")
 
 
-    try:
-        with open(condition_order_file_path) as json_file:
-            stimuli = json.load(json_file)
-        print('Loaded condition file')
-        while True:
-            try:
-                start_index = int(input("Please enter the start_index: "))
-                if start_index >=0 and start_index <= len(stimuli)-1:
-                    break
-            except ValueError:
-                print("Please enter a valid index")
-        stimuli = stimuli[start_index:]
-    except:
+#    try:
+#        with open(condition_order_file_path) as json_file:
+#            stimuli = json.load(json_file)
+#        print('Loaded condition file')
+#        while True:
+#            try:
+#                start_index = int(input("Please enter the start_index: "))
+#                if start_index >=0 and start_index <= len(stimuli)-1:
+#                    break
+#            except ValueError:
+#                print("Please enter a valid index")
+#        stimuli = stimuli[start_index:]
+#
+#    except:
+
+    if create_new_condition:
         PVT_stimuli = []
         TMS_stimuli = []
         stimuli = []

@@ -159,6 +159,24 @@ def protocol_attempt(condition_idx:int, protocol_path:str, stim_number:int = 0):
         protocol = [condition_dict]
     save_list(protocol_path, protocol)
 
+def creat_condition_list(condition):
+    """Creates a list of stimuli with the given condition. No PVTs in a row"""
+    frequency = condition['frequency']
+    phase = condition['phase_in_deg']
+    stimuli = []
+    PVT_stimuli = []
+    TMS_stimuli = []
+    PVT_stimuli.extend([{'stim_type': 'PVT','frquency': frequency,'phase': phase}]*cfg.number_of_PVT)
+    stimuli.extend([{'stim_type': 'TMS','frquency': frequency,'phase': phase}]*cfg.number_of_TMS)
+    for PVT_stimulus in PVT_stimuli:
+        while True:
+            random_index = random.randint(0, len(stimuli)-1)
+            """Check if not two PVT follow each other"""
+            if not(stimuli[random_index-1]['stim_type'] == 'PVT' or stimuli[random_index]['stim_type'] == 'PVT'):
+                stimuli.insert(random_index, PVT_stimulus)
+                break
+    return stimuli
+
 #%%
 def start(verbose:bool = False):
     subject_token = get_subject_token()

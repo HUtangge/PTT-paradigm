@@ -132,6 +132,17 @@ def ask_user_yes_no_question(question:str):
             return False
         else:
             print("Please type a valid answer")
+def ask_user_for_stimulation_idx():
+    while True:
+        try:
+            start_index = int(input("Please enter the start_index: "))
+            if start_index >=0 and start_index <= len(cfg.number_of_PVT_per_phase+cfg.number_of_TMS_per_phase)-1:
+                break
+            else:
+                print("Index out of range!")
+        except ValueError:
+            print("Please enter a valid index")
+    return start_index
 
 def protocol_attempt(condition_idx:int, protocol_path:str, stim_number:int = 0):
     """Protocols an attempt with the stimulated index and stim_number in stim list"""

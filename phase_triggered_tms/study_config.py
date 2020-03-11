@@ -53,9 +53,14 @@ conditions = [{'index': 0,
 
 recordings_path = 'C:\\recordings\\TG_NK_TMS_study\\'
 
-number_of_PVT = 60
 number_of_TMS = 300
+number_of_PVT = 60
+run_length = 75
 
-run_length = 100
+
+# TG: for test
+#number_of_TMS = 10
+#number_of_PVT = 2
+#run_length = 5
 
 verbose = True

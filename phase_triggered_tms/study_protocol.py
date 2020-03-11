@@ -16,8 +16,8 @@ import os
 import numpy as np
 import json
 from luckyloop.client import LuckyClient
-from luckyloop.mock import mock
-#from arduino import sandy
+# from luckyloop.mock import mock
+from arduino import sandy
 from localite.api import Coil
 from phase_triggered_tms import study_config as cfg
 from reiz.marker import push
@@ -28,19 +28,13 @@ from liesl.files.session import Session, Recorder
 from reiz.audio import Message
 import re
 import pickle
-
+#%%
 protocol_file_name = "protocol.list"
 
 def countdown(canvas, sek):
     for i in range(0,sek):
-        #reiz.audio.library.hint.play_blocking()
         cue = reiz.Cue(canvas, visualstim=Mural(text=str(sek-i)))
         cue.show(duration=1)
-
-def gen_range(start, end, step):
-        while start <= end:
-            yield start
-            start += step
 
 def random_time(min, max):
         rand = random.random()
@@ -53,25 +47,6 @@ def random_condition(conditions):
     conditions_idx = random.randint(0,len(conditions)-1)
     condition = conditions[conditions_idx]
     return condition
-
-def random_condition2(conditions, subject):
-    """Get a randomized condition"""
-    conditions_idx = list(range(1, 11, 1))
-    sub_list = os.listdir(cfg.recordings_path)
-    if ('sub-' + subject) in sub_list:
-        condition_list = os.listdir(cfg.recordings_path + "sub-" + subject)
-    else:
-        condition_list = []
-    tested_conditions = []
-    for cond in condition_list:
-        tested_conditions.append(int(re.findall(r'\d+', cond)[0]))
-    untested_conditions = list(set(conditions_idx) - set(tested_conditions))
-    condition_idx = random.choice(untested_conditions)
-    condition = conditions[condition_idx - 1]
-    frequencies_to_stimulate = condition[1]
-    phases_to_stimulate = condition[2]
-    intensity_to_stimulate = condition[0]
-    return condition_idx, frequencies_to_stimulate, phases_to_stimulate, intensity_to_stimulate
 
 def get_subject_token():
     """Get a subject token in format VvNn from user input"""
@@ -95,23 +70,12 @@ def get_RMT(max_percent_RMT:int):
             print("Please enter a valid number")
     return RMT
 
-def save_dict(path:str, dictionary:dict):
-    np_float_32_to_float(dictionary)
-    dict_as_json = json.dumps(dictionary)
-    f = open(path, "w")
-    f.write(dict_as_json)
-    f.close()
-
-def load_dict(path:str) -> dict:
-    try:
-        f = open(path,"r")
-        loaded_dict = dict(json.load(f))
-        f.close()
-        return loaded_dict
-    except FileNotFoundError:
-        return False
-
 def save_list(path:str, list_to_save:list):
+    """Creates directory structure and saves list"""
+    try:
+        os.makedirs(os.path.dirname(path))
+    except FileExistsError:
+        pass
     with open(path, "wb") as fp:
         pickle.dump(list_to_save, fp)
 
@@ -159,15 +123,14 @@ def protocol_attempt(condition_idx:int, protocol_path:str, stim_number:int = 0):
         protocol = [condition_dict]
     save_list(protocol_path, protocol)
 
-def creat_condition_list(condition):
+def create_stim_list(condition):
     """Creates a list of stimuli with the given condition. No PVTs in a row"""
     frequency = condition['frequency']
     phase = condition['phase_in_deg']
     stimuli = []
     PVT_stimuli = []
-    TMS_stimuli = []
-    PVT_stimuli.extend([{'stim_type': 'PVT','frquency': frequency,'phase': phase}]*cfg.number_of_PVT)
-    stimuli.extend([{'stim_type': 'TMS','frquency': frequency,'phase': phase}]*cfg.number_of_TMS)
+    PVT_stimuli.extend([{'stim_type': 'PVT','frequency': frequency,'phase': phase}]*cfg.number_of_PVT)
+    stimuli.extend([{'stim_type': 'TMS','frequency': frequency,'phase': phase}]*cfg.number_of_TMS)
     for PVT_stimulus in PVT_stimuli:
         while True:
             random_index = random.randint(0, len(stimuli)-1)
@@ -175,13 +138,29 @@ def creat_condition_list(condition):
             if not(stimuli[random_index-1]['stim_type'] == 'PVT' or stimuli[random_index]['stim_type'] == 'PVT'):
                 stimuli.insert(random_index, PVT_stimulus)
                 break
+    for stimulus_idx,stimulus in enumerate(stimuli):
+        stimuli[stimulus_idx] = {**{'stimulus_idx': stimulus_idx},**stimulus}
     return stimuli
+
+def create_break_idx_timeleft(stimuli:list, condition:dict, run_length:int):
+    TMS_counter = 0
+    break_idx = []
+    timeleft = []
+    for stimulus in stimuli:
+        if stimulus['stim_type'] == 'TMS':
+            TMS_counter += 1
+            if TMS_counter % run_length == 0:
+                break_idx.append(stimulus['stimulus_idx'])
+    run_duration = run_length * 10 / 60
+    timeleft = np.array(list(range(int(TMS_counter/run_length)))[::-1]) * run_duration
+    break_idx = break_idx[:-1]
+    timeleft = timeleft[:-1]
+    return break_idx, timeleft
 
 #%%
 def start(verbose:bool = False):
     subject_token = get_subject_token()
     subject_folder = f"{cfg.recordings_path}sub-{subject_token}\\"
-
     RMT = get_RMT(max_percent_RMT = 120)
 
     """Check if there are old conditions"""
@@ -195,7 +174,7 @@ def start(verbose:bool = False):
             condition = cfg.conditions[condition_idx]
 
             """ToDo: Ask operator if they want to continue from a specific stim idx"""
-            stim_number = 42
+            stim_number = ask_user_for_stimulation_idx()
         else:
             """Select condition which as not been stimulated before"""
             already_stimulated_conditions = set([x['condition_idx'] for x in load_list(protocol_path)])
@@ -206,121 +185,80 @@ def start(verbose:bool = False):
 
     else:
         """Select random condition"""
-        create_new_condition = True
         condition = random_condition(cfg.conditions)
         stim_number = 0
+    condition_idx = condition['index']
+    run_length = cfg.run_length
 
     """Protocol that the condition has been stimulated"""
     protocol_attempt(condition['index'], protocol_path, stim_number)
 
-    """If there was previous experiment, ask user if want to repeat"""
-
-    """If want to repeakt ask for stimulation index"""
-    => a condition + stimulation index to start
-
     """Save the condition"""
     condition_order_directory = cfg.recordings_path+"sub-"+subject_token+'\\condition_%s\\config\\' % condition_idx
     condition_order_file_path = condition_order_directory+'config.json'
-
-    """Check if all streams are available"""
-    streamargs = [{'name':"localite_marker"},   # comments: make a real list
-                  {'name':"reiz-marker"},
-                  {'name':"localite_marker"},
-                  {'name':"eego"},
-                  {'name':"GDX-RB_0K2002A1"}]
-
-    session = Session(prefix=subject_token,
-                      streamargs=streamargs)
-
-    # TG: as we have 5 conditions for each intensity, so I randomize two studies (Nelli and me), I can also do it in a separate way.
-    condition_idx, frequencies_to_stimulate, phases_to_stimulate, intensity_to_stimulate = random_condition(conditions = cfg.conditions, subject = subject_token)
-
-    """Define stimulation intensity"""
-    stimulation_intensity = round(RMT*intensity_to_stimulate)
-    print(f"Stimulation intensity {stimulation_intensity}")
-
-
-#    try:
-#        with open(condition_order_file_path) as json_file:
-#            stimuli = json.load(json_file)
-#        print('Loaded condition file')
-#        while True:
-#            try:
-#                start_index = int(input("Please enter the start_index: "))
-#                if start_index >=0 and start_index <= len(stimuli)-1:
-#                    break
-#            except ValueError:
-#                print("Please enter a valid index")
-#        stimuli = stimuli[start_index:]
-#
-#    except:
-
-    if create_new_condition:
-        PVT_stimuli = []
-        TMS_stimuli = []
-        stimuli = []
-        stimulus_idx = 0
-        for frequency in frequencies_to_stimulate:
-            for phase in phases_to_stimulate:
-                PVT_stimuli.extend([(('PVT',frequency,phase))]*cfg.number_of_PVT_per_phase)
-                TMS_stimuli.extend([(('TMS',frequency,phase))]*cfg.number_of_TMS_per_phase)
-        stimuli_list = PVT_stimuli+TMS_stimuli
-
-        # TG: this is for generating a random list, as we do not want to have two PVT trials come together, so we generate random number with the purpose
-        # this process takes relative long, I think there is some better way
-        stimuli_idx = list(range(0, len(stimuli_list), 1))
-        while True:
-            PVT_stimuli_idx = random.sample(range(0, len(stimuli_list), 1), cfg.number_of_PVT_per_phase)
-            PVT_stimuli_idx = sorted(PVT_stimuli_idx)
-            if 1 not in np.diff(PVT_stimuli_idx):
-                break
-        TMS_stimuli_idx = list(set(stimuli_idx) - set(PVT_stimuli_idx))
-        stimuli_idx = PVT_stimuli_idx + TMS_stimuli_idx
-
-        count = -1
-        for stimulus_idx in stimuli_idx:
-            count += 1
-            stimuli_list[count] = (stimulus_idx,)+stimuli_list[count]
-        #####################################################################################################
-
-        stimuli = stimuli_list
-        stimuli = sorted(stimuli)
+    try:
+        with open(condition_order_file_path) as json_file:
+            stimuli = json.load(json_file)
+        print('Loaded condition file')
+        break_idx, timeleft = create_break_idx_timeleft(stimuli, condition, run_length)
+        stimuli = stimuli[stim_number:]
+    except:
+        stimuli = create_stim_list(condition)
+        break_idx, timeleft = create_break_idx_timeleft(stimuli, condition, run_length)
         os.makedirs(condition_order_directory)
         with open(condition_order_file_path,'w') as file:
             file.write(json.dumps(stimuli)) #überschreibt immer
         print('Created new condition file')
 
-    break_idx = TMS_stimuli_idx[(cfg.run_length-1):-1:cfg.run_length]
-    N = len(stimuli_idx)
-    expected_duration = (len(TMS_stimuli_idx)*10) / 60
-    print(f'Expected duration is around {expected_duration} min')
+    """Check if all streams are available"""
+    streamargs = [{'name':"localite_marker"},   # comments: make a real list
+                  {'name':"reiz-marker"},
+                  {'name':"eego"},
+                  {'name':"LuckyLoop"},
+                  {'name':"pupil_capture"},
+                  {'name':"GDX-RB_0K2002A1"}]
 
+
+    streamargs = [{'name':"LuckyLoop"}]
+
+    session = Session(prefix=subject_token,
+                      streamargs=streamargs)
+
+    """Define stimulation intensity"""
+    stimulation_intensity = round(condition['percent_RMT']*RMT/100)
+    print(f"Stimulation intensity {stimulation_intensity}")
+
+    """"Calculate the time duration for the intervention"""
+#    TMS_stimulus = {'stim_type': 'TMS', 'frequency':condition['frequency'], 'phase':condition['phase_in_deg']}
+#    N = stimuli.count(TMS_stimulus)
+#    expected_duration = (N * 10) / 60
+#    print(f'Expected duration is around {expected_duration:.2f} min')
 
     #%%
     """Intit Lucky Client"""
     print("Init lucky")
-    #lucky = LuckyClient('134.2.117.144')
-    lucky = LuckyClient()
+    lucky = LuckyClient('134.2.117.144')
 
     """Init Coil"""
     print("Init coil")
     coil = Coil(0)
+    time.sleep(.8)
     coil.amplitude = stimulation_intensity
+    time.sleep(.8)
 
     """Init Sandy"""
     print("Init sandy")
-#    sandy_cli = sandy.Arduino(timeout=1.5, version =  'v0.3.1 - StalwartSandy')
-#    sandy_cli.reset()
-#    sandy_cli.set_threshold(150)
-#    sandy_cli.blink(5)
-#    #sandy_cli.set_threshold(0)
-#    print("Sandy in standby")
-#    time.sleep(1)
+    sandy_cli = sandy.Arduino(timeout=1.5, version =  'v0.3.1 - StalwartSandy')
+    sandy_cli.reset()
+    sandy_cli.set_threshold(150)
+    sandy_cli.blink(5)
+    #sandy_cli.set_threshold(0)
+    print("Sandy in standby")
+    time.sleep(1)
 
     """Create the GUI"""
     canvas = Canvas()
     canvas.open()
-
     labcue= reiz.Cue(canvas, visualstim=reiz.visual.library.logo)
     labcue.show(duration=2)
 
@@ -330,57 +268,57 @@ def start(verbose:bool = False):
         canvas.window.start_run = False
         start_protocol = reiz.Cue(canvas, visualstim=Mural(text='Start protocol with F5'))
         print("Waiting for user to start in GUI")
+
         while not canvas.window.start_run:
             start_protocol.show(duration=1)
         countdown(canvas, 5)
         labcue.show()
 
         t0  = time.time()
-
-        last_frequency = 0
-        reaction_times = []
         break_counter = 0
+        reaction_times = []
 
-        for (stimulus_idx, stim_type, frequency,phase) in stimuli:
-            print(f"Stimulation index {stimulus_idx}")
+        """ set up phase and frequency parameter """
+        phase = condition['phase_in_deg']
+        frequency = condition['frequency']
+        lucky.phase = phase
+        lucky.frequency = frequency
+
+        for single_stimulus in stimuli:
+
+            """get some parameter informations"""
+            stimulus_idx = single_stimulus['stimulus_idx']
+            stim_type = single_stimulus['stim_type']
+
+            print(f"Stimulation index {single_stimulus['stimulus_idx']}")
             time.sleep(0.5)
             time_setup_trial = time.time()
 
             # sends current setup as marker
-            time_push = time.time()
             push(json.dumps({'stimulus_idx':str(stimulus_idx),
                              'stim_type':stim_type,
                              'freq':str(frequency),
                              'phase':str(phase)}),sanitize=False)
-            print("\n push time: " + str(time.time()-time_push ))
-            print('Stimulation index: '+str(stimulus_idx))
             if verbose:
                 print("Start "+stim_type+" for frequency " + str(frequency)+' and phase ' + str(phase))
-
-            # set patrick according to parameters of this trial
-            time_setup = time.time()
-
-            lucky.phase = phase
-            if frequency != last_frequency:
-                lucky.frequency = frequency
-                last_frequency = frequency
-            print("\n lucky time: " + str(time.time()-time_setup ))
 
             # conditional of stimtype, setup TMS and Arduino this trial
             if stim_type == 'TMS':
                 coil.amplitude = stimulation_intensity
+                time.sleep(.8)
                 t1 = time.time()
                 trial_time = t1-t0
                 if verbose:
                     print("\n Trial time: "+ str(trial_time))
                 # TG: wait and trigger phase and frequency dependent, if next stimuli is TMS, then wait 10s, else wait 5s
-                if stimulus_idx < (N-1) and stimuli[stimulus_idx+1][1] == 'TMS':
+                if stimulus_idx < (stimuli[-1]['stimulus_idx']) and stimuli[stimulus_idx - stim_number +1]['stim_type'] == 'TMS':
                     sleep_time= random_time(min=9.5-trial_time,max=10.5-trial_time)
                 else:
                     sleep_time= random_time(min=4.5-trial_time,max=5.5-trial_time)
 
             if stim_type == 'PVT':
                 coil.amplitude = 0
+                time.sleep(.8)
                 # wait and trigger phase and frequency dependent
                 t1 = time.time()
                 trial_time = t1-t0
@@ -388,7 +326,7 @@ def start(verbose:bool = False):
                     print("\n Trial time: "+ str(trial_time))
                 sleep_time= random_time(min=4.5-trial_time,max=5.5-trial_time)
                 try:
-                    # sandy_cli.await_blink()
+                    sandy_cli.await_blink()
                     if verbose:
                         print('Sandy is waiting for blink')
                 except:
@@ -402,31 +340,32 @@ def start(verbose:bool = False):
                 print(f"\n ISI = {sleep_time+trial_time:.2f}s\n")
             labcue.show(duration=sleep_time)
             t0 = time.time()
+
             # conditional on stimtype, wait for keypress
             if stim_type == 'PVT':
                 event_list = []
-                # sandy_cli.receive()
+                sandy_cli.receive()
                 blink_wait_start = time.time()
                 while not(event_list) or len(event_list) == 0:
                     if time.time()-blink_wait_start > 30:
-                        raise ConnectionError(f"Sandy could not be triggered for 1.5 seconds. Stimulus idx: {stimulus_idx}")
+                        raise ConnectionError(f"Sandy could not be triggered for 30 seconds. Stimulus idx: {stimulus_idx}")
+                        break
                     print(f"Wait for blink trigger. Stim: {stimulus_idx}")
                     lucky.trigger()
-                    # event_list = sandy_cli.receive()
+                    event_list = sandy_cli.receive()
                     print(f"Event list: {event_list}")
                 for event in event_list:
                     if event['state-change'] == 'blink-started':
                         time_trigger = int(event['timestamp'])
                 time_wait_for_press = time.time()
                 print("Waiting for button pressed")
+                atleast_one_button_pressed = False
+                time_reaction = False
                 while time.time()-time_wait_for_press < 1.25:
-                    atleast_one_button_pressed = False
-                    time_reaction = False
-                    # response = sandy_cli.receive()
+                    response = sandy_cli.receive()
                     if response:
                         event_list.extend(response)
                     if event_list:
-                        print("Found response")
                         for event in event_list:
                             if event:
                                 print(event)
@@ -442,7 +381,7 @@ def start(verbose:bool = False):
                 if verbose:
                         print(f"Trigger timestamp= {time_trigger}")
 
-                if  time_trigger is not None: # led was turned on
+                if time_trigger is not None: # led was turned on
                     if verbose:
                         print("Reaction timestamp= "+str(time_reaction))
                     if not(time_reaction) or time_reaction-time_trigger<0 or time_reaction-time_trigger>1000:
@@ -461,23 +400,23 @@ def start(verbose:bool = False):
                     push(json.dumps({'reaction_time':str(reaction_time)}),
                          sanitize=False)
                     rt.show(duration=1)
-            else: # when TMS stimulus
-                # TG:for test
-                print('hello')
+            else:
+                # when TMS stimulus
                 lucky.trigger()
 
             try:
-                if stimuli[stimulus_idx+1][1] == "PVT":
+                if stimuli[stimulus_idx - stim_number]['stim_type'] == "PVT":
                     coil.amplitude = 0
+                    time.sleep(.8)
             except IndexError:
                 print("Index error")
 
-            if stimulus_idx in break_idx and (stimulus_idx<stimuli[-1][0]): #make a break after cfg.run_length stimuli if experiment is not over
+            if stimulus_idx in break_idx: #make a break after cfg.run_length stimuli if experiment is not over
                 break_counter += 1
                 if break_counter == 1:
-                    mean_run_reaction_time = np.mean(reaction_times[:stimulus_idx])
+                    mean_run_reaction_time = np.mean(reaction_times[:break_idx.index(stimulus_idx)])
                 else:
-                    mean_run_reaction_time = np.mean(reaction_times[break_idx[break_counter-2]+1:stimulus_idx])
+                    mean_run_reaction_time = np.mean(reaction_times[(break_idx[break_idx.index(stimulus_idx) - 1] - stim_number + 1):break_idx[break_idx.index(stimulus_idx)]])
                 mean_overall_reaction_time = np.mean(reaction_times)
                 #displays run reaction time
                 v_run_reaction_time = reiz.Cue(canvas,
@@ -490,8 +429,8 @@ def start(verbose:bool = False):
                 v_overall_reaction_time.show(duration=2)
 
                 #calculates and shows the expected duration of the intervention that is  left
-                expected_duration_left = expected_duration - (cfg.run_length * 10 * break_counter) / 60
-                print(f'Expected duration is around {expected_duration} min')
+                expected_duration_left = timeleft[break_idx.index(stimulus_idx)]
+                print(f'Expected duration is around {expected_duration_left} min')
                 v_expected_duration_left = reiz.Cue(canvas,
                                   visualstim=Mural(text='Expected duration left = '+'{0:3.1f} min'.format(expected_duration_left)))
                 v_expected_duration_left.show(duration=4)

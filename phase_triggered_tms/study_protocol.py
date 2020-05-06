@@ -28,6 +28,8 @@ from liesl.files.session import Session, Recorder
 from reiz.audio import Message
 import re
 import pickle
+
+from pre_post.TMS import mep_plot
 #%%
 protocol_file_name = "protocol.list"
 
@@ -182,7 +184,6 @@ def start(verbose:bool = False):
             conditions_not_done = [cfg.conditions[condition_idx] for condition_idx in conditions_idx_not_done]
             condition = random_condition(conditions_not_done) # select a condition
             stim_number = 0
-
     else:
         """Select random condition"""
         condition = random_condition(cfg.conditions)
@@ -445,7 +446,6 @@ def start(verbose:bool = False):
     v_intervention_finished = reiz.Cue(canvas,
                               visualstim=Mural(text='Intervention is finished. Please stop the recording'))
     v_intervention_finished.show(duration=1)
-
 
 if __name__ == '__main__':
     start(verbose = True)

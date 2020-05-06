@@ -29,7 +29,7 @@ from reiz.audio import Message
 import re
 import pickle
 
-from pre_post.TMS import mep_plot
+from phase_triggered_tms.pre_post.TMS import mep_plot
 #%%
 protocol_file_name = "protocol.list"
 

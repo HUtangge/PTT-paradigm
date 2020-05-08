@@ -7,7 +7,7 @@ Created on Tue Mar 10 09:28:37 2020
 from liesl.files.session import Session
 from stg.api import STG4000
 from PyQt5 import QtWidgets
-from prana.pre_post.hwave import test_stimulation
+from phase_triggered_tms.pre_post.hwave import test_stimulation
 import sys
 from functools import partial
 from reiz.marker import push
@@ -18,7 +18,9 @@ import liesl
 import configparser
 import matplotlib
 from matplotlib.backends.qt_compat import is_pyqt5
+from liesl.buffers.response import Response
 
+#%%
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas,
@@ -168,11 +170,16 @@ reiz.marker.start()
         
 if __name__ == "__main__":
     cfg = configparser.ConfigParser()
-    cfg.read(r"C:\tools\study-breathing_intervention\prana\cfg.ini")
-    with open(r"C:\tools\study-breathing_intervention\prana\cfg.ini", "w",) as configfile:
+    cfg.read("/Users/getang/study-phase-triggered-TMS/cfg.ini")
+    with open("/Users/getang/study-phase-triggered-TMS/cfg.ini", "w",) as configfile:
         cfg.write(configfile)
-    streamargs = [{'name':"eego"}, {'name':'reiz-marker'}, {'name':'GDX-RB_0K2002A1'}, {'name':'localite_marker'}, {'name':'pupil_capture'}]
-    session    = Session(prefix=cfg['study_info']['subject_token'], streamargs=streamargs)
+    streamargs = [{'name':"eego"}, 
+                  {'name':'reiz-marker'}, 
+                  {'name':'GDX-RB_0K2002A1'}, 
+                  {'name':'localite_marker'}, 
+                  {'name':'pupil_capture'}]
+    session = Session(prefix=cfg['general']['subject_token'], 
+                      streamargs=streamargs)
     time.sleep(0.01)
 
     with session('h_reflex'):

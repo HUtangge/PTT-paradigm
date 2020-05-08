@@ -19,7 +19,7 @@ from luckyloop.client import LuckyClient
 # from luckyloop.mock import mock
 from arduino import sandy
 from localite.api import Coil
-from phase_triggered_tms import study_config as cfg
+from ast import literal_eval
 from reiz.marker import push
 from reiz import Canvas
 from reiz.visual import Mural, library
@@ -28,11 +28,11 @@ from liesl.files.session import Session, Recorder
 from reiz.audio import Message
 import re
 import pickle
+import configparser
+from phase_triggered_tms import study_config as cfg
 
 from phase_triggered_tms.pre_post.TMS import mep_plot
 #%%
-protocol_file_name = "protocol.list"
-
 def countdown(canvas, sek):
     for i in range(0,sek):
         cue = reiz.Cue(canvas, visualstim=Mural(text=str(sek-i)))
@@ -103,7 +103,7 @@ def ask_user_for_stimulation_idx():
     while True:
         try:
             start_index = int(input("Please enter the start_index: "))
-            if start_index >=0 and start_index <= cfg.number_of_PVT+cfg.number_of_TMS-1:
+            if start_index >=0 and start_index <= int(cfg['main']['number_of_pvt'])+int(cfg['main']['number_of_tms'])-1:
                 break
             else:
                 print("Index out of range!")
@@ -131,8 +131,8 @@ def create_stim_list(condition):
     phase = condition['phase_in_deg']
     stimuli = []
     PVT_stimuli = []
-    PVT_stimuli.extend([{'stim_type': 'PVT','frequency': frequency,'phase': phase}]*cfg.number_of_PVT)
-    stimuli.extend([{'stim_type': 'TMS','frequency': frequency,'phase': phase}]*cfg.number_of_TMS)
+    PVT_stimuli.extend([{'stim_type': 'PVT','frequency': frequency,'phase': phase}]*int(cfg['main']['number_of_pvt']))
+    stimuli.extend([{'stim_type': 'TMS','frequency': frequency,'phase': phase}]*int(cfg['main']['number_of_tms']))
     for PVT_stimulus in PVT_stimuli:
         while True:
             random_index = random.randint(0, len(stimuli)-1)
@@ -160,10 +160,12 @@ def create_break_idx_timeleft(stimuli:list, condition:dict, run_length:int):
     return break_idx, timeleft
 
 #%%
+protocol_file_name = "protocol.list"
 def start(verbose:bool = False):
     subject_token = get_subject_token()
-    subject_folder = f"{cfg.recordings_path}sub-{subject_token}\\"
+    subject_folder = f"{cfg['main']['recordings_path']}sub-{subject_token}\\"
     RMT = get_RMT(max_percent_RMT = 120)
+    conditions = literal_eval(cfg['main']['conditions'])
 
     """Check if there are old conditions"""
     protocol_path = f"{subject_folder}{protocol_file_name}"
@@ -173,29 +175,29 @@ def start(verbose:bool = False):
         if ask_user_yes_no_question(question):
             """Load condition which has been stimulated last"""
             condition_idx = protocol[-1]['condition_idx']
-            condition = cfg.conditions[condition_idx]
+            condition = conditions[condition_idx]
 
             """ToDo: Ask operator if they want to continue from a specific stim idx"""
             stim_number = ask_user_for_stimulation_idx()
         else:
             """Select condition which as not been stimulated before"""
             already_stimulated_conditions = set([x['condition_idx'] for x in load_list(protocol_path)])
-            conditions_idx_not_done = list(set(range(0,len(cfg.conditions)))-already_stimulated_conditions)
-            conditions_not_done = [cfg.conditions[condition_idx] for condition_idx in conditions_idx_not_done]
+            conditions_idx_not_done = list(set(range(0,len(conditions)))-already_stimulated_conditions)
+            conditions_not_done = [conditions[condition_idx] for condition_idx in conditions_idx_not_done]
             condition = random_condition(conditions_not_done) # select a condition
             stim_number = 0
     else:
         """Select random condition"""
-        condition = random_condition(cfg.conditions)
+        condition = random_condition(conditions)
         stim_number = 0
     condition_idx = condition['index']
-    run_length = cfg.run_length
+    run_length = int(cfg['main']['run_length'])
 
     """Protocol that the condition has been stimulated"""
     protocol_attempt(condition['index'], protocol_path, stim_number)
 
     """Save the condition"""
-    condition_order_directory = cfg.recordings_path+"sub-"+subject_token+'\\condition_%s\\config\\' % condition_idx
+    condition_order_directory = cfg['main']['recordings_path']+"sub-"+subject_token+'\\condition_%s\\config\\' % condition_idx
     condition_order_file_path = condition_order_directory+'config.json'
     try:
         with open(condition_order_file_path) as json_file:
@@ -448,5 +450,9 @@ def start(verbose:bool = False):
     v_intervention_finished.show(duration=1)
 
 if __name__ == '__main__':
+    cfg = configparser.ConfigParser()
+    cfg.read("/Users/getang/study-phase-triggered-TMS/cfg.ini")
+    with open("/Users/getang/study-phase-triggered-TMS/cfg.ini", "w",) as configfile:
+        cfg.write(configfile)
     start(verbose = True)
 

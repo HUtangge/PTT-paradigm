@@ -120,4 +120,4 @@ class Ui_MainWindow(object):
         self.actionDecrease.setText(_translate("MainWindow", "Decrease"))
         self.action20.setText(_translate("MainWindow", "100"))
 
-from prana.pre_post.hwave.mplwidget import MplWidget
+from phase_triggered_tms.pre_post.hwave.mplwidget import MplWidget

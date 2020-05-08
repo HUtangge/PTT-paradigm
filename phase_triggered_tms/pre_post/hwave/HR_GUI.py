@@ -65,32 +65,32 @@ class Ui(QtWidgets.QMainWindow, test_stimulation.Ui_MainWindow):
         self.intensity_minus_100.clicked.connect(partial(self.decrease_intensity, 100))
         self.intensity_plus_100.clicked.connect(partial(self.increase_intensity, 100))
         self.trigger.clicked.connect(self.start_stimulation)
-
         push("hreflex_start")
 
-    def plot_hreflex(self):
-        data    = self.buffer.get_data()[:, self.FDS_R]
-        peakpos = [data.argmin(), data.argmax()]
-        val     = [data.min(), data.max()]
-        vpp     = val[1] - val[0]
-        wndw    = [np.min(peakpos) - 100, np.max(peakpos) + 100]
-        timey   = np.arange(0, len(data), 1)
+    def plot_hreflex(self, onset_in_ms: int):
+        chunk, tstamps = self.buffer.get()[:, self.FDS_R]
+        response = Response(chunk = chunk,
+                    tstamps = tstamps,
+                    fs = self.buffer.fs,
+                    onset_in_ms = onset_in_ms,
+                    post_in_ms = 250)
+        xticks, xticklabels, xlim = response.get_xaxis(stepsize=25)
+        trace = response.get_trace(channel_idx = self.FDS_R, baseline_correction = True)
+        vpp = response.get_vpp(channel_idx = self.FDS_R)
 
         # discards the old graph
         self.MplWidget.canvas.axes.clear()
 
         # plot data
-        self.MplWidget.canvas.axes.plot(
-            timey[wndw[0] : wndw[1]], data[wndw[0] : wndw[1]])
+        self.MplWidget.canvas.axes.plot(trace)
 
-        self.MplWidget.canvas.axes.vlines(
-            [timey[peakpos[0]]], val[0], np.mean(data), color="red", linestyle="dashed")
-        self.MplWidget.canvas.axes.vlines(
-            [timey[peakpos[1]]], val[1], np.mean(data), color="red", linestyle="dashed")
-
-        textstr = "Vpp = {0:3.2f}".format(vpp)
-        props   = dict(boxstyle="round", facecolor="wheat", alpha=0.5)
-
+        for pos, val in zip(response.peakpos_in_ms, response.peakval):            
+            self.MplWidget.canvas.axes.vlines(
+                [pos], val, 0, color="red", linestyle="dashed")
+        
+        self.MplWidget.canvas.axes.vlines([onset_in_ms], 0, 1,                                           transform=self.MplWidget.canvas.axes.get_xaxis_transform(), colors='r')
+        textstr = 'Vpp = {0:3.2f}'.format(vpp)
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)        
         self.MplWidget.canvas.axes.text(
             0.05,
             0.95,
@@ -99,11 +99,14 @@ class Ui(QtWidgets.QMainWindow, test_stimulation.Ui_MainWindow):
             fontsize=14,
             verticalalignment="top",
             bbox=props)
+        self.MplWidget.canvas.axes.set_title('H_reflex')
+        self.MplWidget.canvas.axes.set_xticks(xticks)
+        self.MplWidget.canvas.axes.set_xlim(xlim)
+        self.MplWidget.canvas.axes.set_xticklabels(xticklabels)
         time.sleep(0.01)
-
         # refresh canvas
         self.MplWidget.canvas.draw()
-
+        
     def download(self):
         self.cur = int(self.intensity_label.text())
         amplitudes_in_mA, durations_in_ms = create_stimulation_signal(self.cur)

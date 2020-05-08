@@ -11,8 +11,8 @@ from reiz.visual import Background, Mural
 import reiz
 import time
 
-def start(canvas, trials=5):
-
+#%%
+def start(canvas, trials=5, verbose = True):
     bg = Background(color='gray')
     def countdown(canvas, sek):
         for i in range(0, sek):
@@ -43,3 +43,5 @@ def start(canvas, trials=5):
         augen_zu.show(duration = 30)
     post.show(duration = 3)
 
+if __name__ == '__main__':
+    verbose = True

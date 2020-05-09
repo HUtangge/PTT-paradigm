@@ -23,6 +23,7 @@ MarkerStreamInlet = NewType("MarkerStreamInlet", StreamInlet)
 Seconds = Union[int,float]
 import logging
 import json
+from scipy import stats
 logger = logging.getLogger(name='__file__')
 
 # %%
@@ -38,7 +39,8 @@ def auto_trigger(coil:Coil,
     """
     print('auto trigger')
     marker.pull_chunk() #flush the buffer to be sure we catch the latest sample
-    lucky.trigger_now() #trigger the coil
+    # lucky.trigger_now() #trigger the coil
+    lucky.trigger()
     _, onset_in_ms = marker.pull_sample()
     try:
         response = wait_for_trigger(coil, marker, buffer, onset_in_ms,  timeout) #wait for the response
@@ -68,7 +70,6 @@ def manual_trigger(coil:Coil,
     response = wait_for_trigger(coil, marker, buffer, onset_in_ms, timeout=FOREVER)
     return response
 
-
 def wait_for_trigger(coil:Coil,
                     marker:MarkerStreamInlet,
                     buffer:DataRingBuffer,
@@ -94,7 +95,7 @@ def wait_for_trigger(coil:Coil,
                         tstamps=tstamps,
                         fs=buffer.fs,
                         onset_in_ms=onset_in_ms,
-                        post_in_ms = 150)
+                        post_in_ms = 100)
     return response
 
 def create_marker(response, coil, emg_labels, labels):
@@ -158,7 +159,7 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             for pos, val in zip(response.peakpos_in_ms, response.peakval):
                 ax.plot([pos, pos],[0, val], color='red', linestyle=':')
             #TG: for test temporary change scale to [-1 1]
-            ax.plot([response.pre_in_ms, response.pre_in_ms],[-100, 100], color='red')
+            ax.axvline(x = response.pre_in_ms, color = 'red')
             textstr = 'Vpp = {0:3.2f}'.format(vpp)
             props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
             ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=14,
@@ -167,9 +168,7 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             ax.set_xticks(xticks)
             ax.set_xlim(xlim)
             ax.set_xticklabels(xticklabels)
-
         plt.show()
-
 
     task.play_blocking()
 
@@ -410,24 +409,25 @@ def free_mode(autotrigger=5, channel='EDC_L', isi=(3.5,4.5),
 
 
 #%% TG: test coil trigger
-#import arduino.onebnc
-#import time
-#from localite.api import Coil
-#import reiz
-#coil = Coil(0)
-#a = arduino.onebnc.Arduino()
-#coil = Coil(0)
-#coil.amplitude = 50
-#delay = []
-#delay_coil = []
-#for i in range(9):
-#    print(i)
-#    start = time.time()
-#    coil.trigger()
-#    stop = time.time()
-#    reiz.marker.push('coil was triggered')
-#    push_time = time.time()
-#    time.sleep(4)
-#    delay_coil.append(push_time - stop)
+def test():
+    import arduino.onebnc
+    import time
+    from localite.api import Coil
+    import reiz
+    coil = Coil(0)
+    a = arduino.onebnc.Arduino()
+    coil = Coil(0)
+    coil.amplitude = 50
+    delay = []
+    delay_coil = []
+    for i in range(9):
+        print(i)
+        start = time.time()
+        coil.trigger()
+        stop = time.time()
+        reiz.marker.push('coil was triggered')
+        push_time = time.time()
+        time.sleep(4)
+        delay_coil.append(push_time - stop)
 
 

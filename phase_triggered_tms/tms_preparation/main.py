@@ -10,7 +10,6 @@ import liesl
 from liesl.streams import localhostname
 from liesl.files.session import Recorder, Session
 
-
 # %%
 env = Environment()
 env.coil = Coil(0)
@@ -26,6 +25,7 @@ env.emg_labels = env.emg_labels[:9]
 from generics import search_hotspot, find_highest
 from generics import measure_rmt
 from generics import free_mode
+
 # %% Make a rough map for the hotspot  detection by applying several stimuli
 with session("hotspot-detection"):
     collection = search_hotspot(trials=5, env=env, run_automatic=True)

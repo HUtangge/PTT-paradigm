@@ -29,9 +29,7 @@ from reiz.audio import Message
 import re
 import pickle
 import configparser
-from phase_triggered_tms import study_config as cfg
 
-from phase_triggered_tms.pre_post.TMS import mep_plot
 #%%
 def countdown(canvas, sek):
     for i in range(0,sek):
@@ -99,7 +97,7 @@ def ask_user_yes_no_question(question:str):
         else:
             print("Please type a valid answer")
 
-def ask_user_for_stimulation_idx():
+def ask_user_for_stimulation_idx(cfg):
     while True:
         try:
             start_index = int(input("Please enter the start_index: "))
@@ -125,7 +123,7 @@ def protocol_attempt(condition_idx:int, protocol_path:str, stim_number:int = 0):
         protocol = [condition_dict]
     save_list(protocol_path, protocol)
 
-def create_stim_list(condition):
+def create_stim_list(condition, cfg):
     """Creates a list of stimuli with the given condition. No PVTs in a row"""
     frequency = condition['frequency']
     phase = condition['phase_in_deg']
@@ -161,7 +159,7 @@ def create_break_idx_timeleft(stimuli:list, condition:dict, run_length:int):
 
 #%%
 protocol_file_name = "protocol.list"
-def start(verbose:bool = False):
+def start_intervention(cfg, verbose:bool = False):
     subject_token = get_subject_token()
     subject_folder = f"{cfg['main']['recordings_path']}sub-{subject_token}\\"
     RMT = get_RMT(max_percent_RMT = 120)
@@ -178,7 +176,7 @@ def start(verbose:bool = False):
             condition = conditions[condition_idx]
 
             """ToDo: Ask operator if they want to continue from a specific stim idx"""
-            stim_number = ask_user_for_stimulation_idx()
+            stim_number = ask_user_for_stimulation_idx(cfg)
         else:
             """Select condition which as not been stimulated before"""
             already_stimulated_conditions = set([x['condition_idx'] for x in load_list(protocol_path)])
@@ -206,7 +204,7 @@ def start(verbose:bool = False):
         break_idx, timeleft = create_break_idx_timeleft(stimuli, condition, run_length)
         stimuli = stimuli[stim_number:]
     except:
-        stimuli = create_stim_list(condition)
+        stimuli = create_stim_list(condition, cfg)
         break_idx, timeleft = create_break_idx_timeleft(stimuli, condition, run_length)
         os.makedirs(condition_order_directory)
         with open(condition_order_file_path,'w') as file:
@@ -214,15 +212,15 @@ def start(verbose:bool = False):
         print('Created new condition file')
 
     """Check if all streams are available"""
-    streamargs = [{'name':"localite_marker"},   # comments: make a real list
-                  {'name':"reiz-marker"},
-                  {'name':"eego"},
-                  {'name':"LuckyLoop"},
-                  {'name':"pupil_capture"},
-                  {'name':"GDX-RB_0K2002A1"}]
+#    streamargs = [{'name':"localite_marker"},   # comments: make a real list
+#                  {'name':"reiz-marker"},
+#                  {'name':"eego"},
+#                  {'name':"LuckyLoop"},
+#                  {'name':"pupil_capture"},
+#                  {'name':"GDX-RB_0K2002A1"}]
 
 
-    streamargs = [{'name':"LuckyLoop"}]
+    streamargs = [{'name':"eego"}]
 
     session = Session(prefix=subject_token,
                       streamargs=streamargs)
@@ -240,7 +238,7 @@ def start(verbose:bool = False):
     #%%
     """Intit Lucky Client"""
     print("Init lucky")
-    lucky = LuckyClient('134.2.117.144')
+    #lucky = LuckyClient('134.2.117.144')
 
     """Init Coil"""
     print("Init coil")
@@ -251,10 +249,10 @@ def start(verbose:bool = False):
 
     """Init Sandy"""
     print("Init sandy")
-    sandy_cli = sandy.Arduino(timeout=1.5, version =  'v0.3.1 - StalwartSandy')
-    sandy_cli.reset()
-    sandy_cli.set_threshold(150)
-    sandy_cli.blink(5)
+#    sandy_cli = sandy.Arduino(timeout=1.5, version =  'v0.3.1 - StalwartSandy')
+#    sandy_cli.reset()
+#    sandy_cli.set_threshold(150)
+#    sandy_cli.blink(5)
     #sandy_cli.set_threshold(0)
     print("Sandy in standby")
     time.sleep(1)

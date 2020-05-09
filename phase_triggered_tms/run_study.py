@@ -96,7 +96,7 @@ from phase_triggered_tms.tms_preparation.generics import free_mode
 
 #%% hotspot detection
 with session("hotspot-detection"):
-    collection = search_hotspot(trials=5, env=env, run_automatic=True)
+    collection = search_hotspot(trials=40, env=env, run_automatic=True)
 
 try:
     amp, pos, sorter  = find_highest(collection, channel=env.channel_of_interest)
@@ -130,11 +130,19 @@ Pre physiological measurements
 """
 #%% SICI (Pre-measurement)
 with session('SICI_pre'):
-    SICI_collections = search_hotspot(trials=3, task_description='SICI measurement', env=env, run_automatic=True)
+    SICI_collections = search_hotspot(trials=10, task_description='SICI measurement', env=env, run_automatic=True)
 
 #%% ICF (Pre-measurement)
 with session('ICF_pre'):
-    ICF_collections = search_hotspot(trials=5, task_description='ICF measurement', env=env, run_automatic=True)
+    ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
+
+#%% CSE_100 (Pre-measurement)
+with session('CSE_100_pre'):
+    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+
+#%% CSE_120 (Pre-measurement)
+with session('CSE_120_pre'):
+    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
 
 #%%
 """
@@ -159,6 +167,14 @@ with session('SICI_post_first'):
 #%% ICF (Post-measurement)
 with session('ICF_post_first'):
     ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
+
+#%% CSE_100 (Post-measurement)
+with session('CSE_100_post_first'):
+    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+
+#%% CSE_120 (Post-measurement)
+with session('CSE_120_post_first'):
+    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
 
 #%%
 """
@@ -189,6 +205,14 @@ with session('SICI_post_second'):
 #%% ICF (Post-measurement)
 with session('ICF_post_second'):
     ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
+
+#%% CSE_100 (Post-measurement)
+with session('CSE_100_post_second'):
+    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+
+#%% CSE_120 (Post-measurement)
+with session('CSE_120_post_second'):
+    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
 
 """
 Experiment ended

@@ -10,6 +10,18 @@ import liesl
 from liesl.streams import localhostname
 from liesl.files.session import Recorder, Session
 
+"""Check if all streams are available"""
+streamargs = [{'name':"localite_marker"},   # comments: make a real list
+              {'name':"reiz-marker"},
+              {'name':"eego"},
+              #{'name':"LuckyLoop"},
+              {'name':"pupil_capture"},
+              #{'name':"GDX-RB_0K2002A1"}
+              ]
+
+session = Session(prefix=subject_token,
+                  streamargs=streamargs)
+
 # %%
 env = Environment()
 env.coil = Coil(0)

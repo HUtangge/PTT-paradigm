@@ -158,7 +158,7 @@ First post physiological measurements
 
 #%% Resting state (Post-measurement)
 with session("resting_state_post"):
-	REST.start(canvas, trials=5)
+	REST.start(trials=5)
 
 #%% SICI (Post-measurement)
 with session('SICI_post_first'):
@@ -192,7 +192,7 @@ with session("slalom_post"):
 
 #%% Brain machine interface (Post-measurement)
 with session("bmi_post"):
-    BMI.bmi_main(canvas)
+    BMI.bmi_main()
 
 #%%
 """

@@ -10,15 +10,17 @@ import time
 import reiz
 import configparser
 from localite.coil import Coil
-from phase_triggered_tms.pre_post import REST
+from phase_triggered_tms.pre_post import REST, BMI
+from phase_triggered_tms.study_protocol import start_intervention
 import liesl
 from liesl.streams import localhostname
 from liesl.files.session import Recorder, Session
 from slalom.slalom_class import Slalom
-import sys
-sys.path.append(r'C:\Users\Messung\Desktop\study-phase-triggered-TMS\TMS_experiment_preparation')
+#import sys
+#sys.path.append(r'C:\Users\Messung\Desktop\study-phase-triggered-TMS\TMS_experiment_preparation')
 from phase_triggered_tms.tms_preparation.configure import Environment
 from luckyloop.client import LuckyClient
+import arduino.onebnc
 
 #%%
 env = Environment()

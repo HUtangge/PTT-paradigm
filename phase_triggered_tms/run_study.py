@@ -22,168 +22,175 @@ from phase_triggered_tms.tms_preparation.configure import Environment
 from luckyloop.client import LuckyClient
 import arduino.onebnc
 
-#%%
-env = Environment()
-env.coil = Coil(0)
-env.marker = liesl.get_streams_matching(name="localite_marker")[0]
-env.bvr = liesl.get_streaminfos_matching(name="eego")[0]
-env.lucky = LuckyClient('134.2.117.144')
-env.buffer = liesl.RingBuffer(env.bvr, duration_in_ms=2000)
-env.channel_of_interest = 'chan_1'
-env.setup()
-env.emg_labels = env.emg_labels[:9]
 
-#%%
-from phase_triggered_tms.tms_preparation.generics import search_hotspot, find_highest
-from phase_triggered_tms.tms_preparation.generics import measure_rmt
-from phase_triggered_tms.tms_preparation.generics import free_mode
-
-#%%
-
-canvas = reiz.Canvas()
-canvas.open()
-time.sleep(0.01)
-
-reiz.marker.start()
-
+#%% Preparation for the recording
 cfg = configparser.ConfigParser()
-cfg.read(r'C:\tools\study-breathing_intervention\prana\cfg.ini')
-subject_token = cfg['study_info']['subject_token']
-with open(r'C:\tools\study-breathing_intervention\prana\cfg.ini', "w") as configfile:
+cfg.read(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini")
+with open(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", "w",) as configfile:
     cfg.write(configfile)
 
-#streamargs = [{'name':"eego"}, {'name':'reiz-marker'}, {'name':'GDX-RB'}, {'name':'localite_marker'}, {'name':'pupil_capture'}]
-#session    = Session(prefix=subject_token, streamargs=streamargs)
-sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini')
+streamargs = [{'name':"localite_marker"},   # comments: make a real list
+              {'name':"reiz-marker"},
+              {'name':"eego"},
+              #{'name':"LuckyLoop"},
+              #{'name':"pupil_capture"},
+              #{'name':"GDX-RB_0K2002A1"}
+              ]
 
+session = Session(prefix=cfg['general']['subject_token'],
+                      streamargs=streamargs,
+                      mainfolder = cfg['main']['recordings_path'])
 
+#%%
 
 #TODO: currently, the Slalom class assumes that the cfg.ini is in the current working directory, and it will be
 #written to it. Also, we will have to specify an outdir, where results will be saved.
 
 #push slalom results to marker server?
-#%% preparation for the recording
-
-
-
-
-#%% Resting
+#%%
+"""
+Pre behaviral measurements (around 1 hour)
+"""
+#%% Resting state (Pre-measurement)
 with session("resting_state_pre"):
-	REST.start(canvas, trials=5)
+	REST.start(trials=5)
 
-#%% SLALOM CALIBRATION ----------------------------------------------------------------------
+#%% Slalom calibration (Pre-measurement)
+sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_cal_pre"):
     sl.calibrate()
 
-    '''
-    calibrate for post as well?
-    '''
-
-#%% SLALOM TEST----------------------------------------------------------------------
+#%% Slalom test (Pre-measurement)
+sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_test_pre"):
     sl.test()
 
-#%% SLALOM TASK----------------------------------------------------------------------
+#%% Slalom test (Pre-measurement)
+sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_pre"):
     sl.run()
 
-#%% BEHA ------------------------------------------------------------------------------------
+#%% Brain machine interface (Pre-measurement)
 with session("bmi_pre"):
-    BMI.bmi_main(canvas)
+    BMI.bmi_main()
 
-#%% PHYS ------------------------------------------------------------------------------------
+#%%
+"""
+TMS related physiological measurements preparation
+"""
+#%% TMS enviroment setup (each time we use TMS, we should restart this part)
+env = Environment()
+env.coil = Coil(0)
+env.marker = liesl.get_streams_matching(name="localite_marker")[0]
+env.bvr = liesl.get_streaminfos_matching(name="eego")[0]
+env.lucky = arduino.onebnc.Arduino()
+# env.lucky = LuckyClient('134.2.117.144')
+env.buffer = liesl.RingBuffer(env.bvr, duration_in_ms=2000)
+env.channel_of_interest = 'chan_13'
+env.setup()
+env.emg_labels = env.emg_labels[12:16]
 
-with session('hotspot_search'):
-    # hotspot search
+from phase_triggered_tms.tms_preparation.generics import search_hotspot, find_highest
+from phase_triggered_tms.tms_preparation.generics import measure_rmt
+from phase_triggered_tms.tms_preparation.generics import free_mode
 
-with session('rmt'):
-    # rmt
+#%% hotspot detection
+with session("hotspot-detection"):
+    collection = search_hotspot(trials=5, env=env, run_automatic=True)
 
+try:
+    amp, pos, sorter  = find_highest(collection, channel=env.channel_of_interest)
+    for ix in reversed(sorter):
+        print('At the {0}. stimulus the response is {1}'.format(ix+1, collection[ix][env.channel_of_interest]))
+except IndexError as e: #aborted run
+    raise IndexError('Not enough runs for evaluation' + str(e))
 
-#%% TMS
-coil = Coil(coil=0, address=('127.0.0.1', 6667))
-time.sleep(0.01)
+#%% hotspot iteration
+with session("hotspot-iteration"):
+    collection = []
+    for candidate in range(0,3,1):
+        candidate_collection = search_hotspot(trials=3, task_description='Change target', env=env)
+        collection.extend(candidate_collection)
 
-'''
-randomize
-'''
+try:
+    amp, pos, sorter  = find_highest(collection, channel=env.channel_of_interest)
+    for ix,_ in enumerate(collection):
+        print('At the {0}. stimulus the response is {1}'.format(ix+1, collection[ix][env.channel_of_interest]))
+except IndexError as e: #aborted run
+    raise IndexError('Not enough runs for evaluation' + str(e))
 
-cfg.read(r'C:\projects\pranayama\prana\cfg.ini')
+#%% Resting motor threshold
+with session("measure-rmt"):
+    results = measure_rmt(channel = env.channel_of_interest,  threshold_in_uv=50,
+                          max_trials_per_amplitude=10, env=env)
 
-with session("sici_pre"):
-    TMS.tms_sequence(canvas, coil, cfg, sequence='sici')
+#%%
+"""
+Pre physiological measurements
+"""
+#%% SICI (Pre-measurement)
+with session('SICI_pre'):
+    SICI_collections = search_hotspot(trials=3, task_description='SICI measurement', env=env, run_automatic=True)
 
-with session("icf_pre"):
-    TMS.tms_sequence(canvas, coil, cfg, sequence='icf')
+#%% ICF (Pre-measurement)
+with session('ICF_pre'):
+    ICF_collections = search_hotspot(trials=5, task_description='ICF measurement', env=env, run_automatic=True)
 
-with session("cse_100_pre"):
-    TMS.tms_sequence(canvas, coil, cfg, sequence='cse_100')
+#%%
+"""
+Main intervention (around 45 minutes)
+"""
+#%% Intervention (main study)
+start_intervention(cfg, verbose = True)
 
-with session("cse_120_pre"):
-    TMS.tms_sequence(canvas, coil, cfg, sequence='cse_120')
+#%%
+"""
+First post physiological measurements
+"""
 
-#%% Calibrate FES
-fes = calibrate_FES.FES()
-with session("calibrate"):
-    fes.calibrate_fes()
-    # NOTE: enter 21 to break calibration loop
-
-# Intervention practice session
-breath_FES.practice_breathing_FES(canvas,cfg)
-
-#%% Intervention ----------------------------------------------------------------------------
-
-breath_FES.breathing_FES_main(canvas, cfg)
-
-#%% PHYS ------------------------------------------------------------------------------------
-
+#%% Resting state (Post-measurement)
 with session("resting_state_post"):
-	REST.start()
+	REST.start(canvas, trials=5)
 
-#%% TMS
-coil = coil.Coil(coil=0, address=('127.0.0.1', 6667))
-time.sleep(0.01)
+#%% SICI (Post-measurement)
+with session('SICI_post_first'):
+    SICI_collections = search_hotspot(trials=10, task_description='SICI measurement', env=env, run_automatic=True)
 
-with session("sici_post"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='sici')
+#%% ICF (Post-measurement)
+with session('ICF_post_first'):
+    ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
 
-with session("icf_post"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='icf')
-
-with session("cse_100_post"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='cse_100')
-
-with session("cse_120_post"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='cse_120')
-
-#%% SLALOM CALIBRATION ----------------------------------------------------------------------
-with session("slalom_cal_pre"):
+#%%
+"""
+Post behaviral measurements (around 1 hour)
+"""
+#%% Slalom calibration (Post-measurement)
+sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
+with session("slalom_cal_post"):
     sl.calibrate()
 
-#%% BEHA ------------------------------------------------------------------------------------
-
+#%% Slalom test (Post-measurement)
+sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_post"):
+    sl.run()
 
+#%% Brain machine interface (Post-measurement)
 with session("bmi_post"):
     BMI.bmi_main(canvas)
 
-#%% TMS ------------------------------------------------------------------------------------
-coil = coil.Coil(coil=0, address=('127.0.0.1', 6667))
+#%%
+"""
+Second post physiological measurements
+"""
+#%% SICI (Post-measurement)
+with session('SICI_post_second'):
+    SICI_collections = search_hotspot(trials=10, task_description='SICI measurement', env=env, run_automatic=True)
 
-with session("sici_post_2"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='sici')
+#%% ICF (Post-measurement)
+with session('ICF_post_second'):
+    ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
 
-with session("icf_post_2"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='icf')
+"""
+Experiment ended
+"""
 
-with session("cse_100_post_2"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='cse_100')
-
-with session("cse_120_post_2"):
-	TMS.tms_sequence(canvas, coil, cfg, sequence='cse_120')
-    
-    
-if __name__ == '__main__':
-    
-    
-    

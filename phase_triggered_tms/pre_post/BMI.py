@@ -15,11 +15,13 @@ Markers:
 """
 
 
-def bmi_main(canvas):
+def bmi_main():
     import numpy as np
     import matplotlib.pyplot as plt
     import time, reiz, liesl
     from reiz.visual import Mural, Background
+    canvas = reiz.Canvas()
+    canvas.open()
 
     def countdown(canvas, sek):
         for i in range(0, sek):
@@ -39,7 +41,7 @@ def bmi_main(canvas):
 
     bg          = Background(color='gray')
     states      = ("Nothing", "Imagine", "Open", "Close")
-    image_lib   = reiz.visual.read_folder(r'C:\projects\pranayama')
+    image_lib   = reiz.visual.read_folder(r'C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\pre_post')
     nBlocks     = 3
     tiles       = np.tile(states, (4))
     block_tiles = np.tile(states, (nBlocks, 4))
@@ -89,3 +91,4 @@ def bmi_main(canvas):
             reiz.Cue(canvas, visualstim=[bg, reiz.visual.Mural("Entspannen", position=[0, -0.4], fontsize=1, color=(0.18, 0.18, 0.18))]).show(5)
 
     reiz.marker.push('bmi_end')
+    canvas.close()

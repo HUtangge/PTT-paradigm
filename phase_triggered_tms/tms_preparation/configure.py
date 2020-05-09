@@ -8,10 +8,11 @@ Created on Mon May 20 18:07:24 2019
 # %%
 import liesl
 from dataclasses import dataclass
-from tools import eeg_channels
+from phase_triggered_tms.tms_preparation.tools import eeg_channels
 import localite.api
 from luckyloop.client import LuckyClient
 import pylsl
+
 @dataclass
 class Environment():
     coil = None #:localite.Coil(host="134.2.117.173")

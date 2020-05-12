@@ -107,7 +107,6 @@ def protocol_attempt(condition_idx:int, protocol_path:str, stim_number:int = 0):
                      'stim_number': stim_number,
                      'time': time.time()}
     protocol = load_list(protocol_path)
-
     if protocol:
         protocol = load_list(protocol_path)
         protocol.append(condition_dict)
@@ -149,15 +148,12 @@ def create_break_idx_timeleft(stimuli:list, condition:dict, run_length:int):
     timeleft = timeleft[:-1]
     return break_idx, timeleft
 
-#%%
-protocol_file_name = "protocol.list"
-def start_intervention(cfg, verbose:bool = False):
-    subject_token = get_subject_token()
-    subject_folder = f"{cfg['main']['recordings_path']}sub-{subject_token}\\"
-    RMT = get_RMT(max_percent_RMT = 120)
-    conditions = literal_eval(cfg['main']['conditions'])
-
+def get_condition(cfg):
     """Check if there are old conditions"""
+    protocol_file_name = "\\protocol.list"
+    subject_token = cfg['general']['subject_token']
+    subject_folder = f"{cfg['main']['recordings_path']}\\{cfg['general']['subject_token']}\\"
+    conditions = literal_eval(cfg['main']['conditions'])
     protocol_path = f"{subject_folder}{protocol_file_name}"
     protocol = load_list(protocol_path)
     if protocol:
@@ -170,7 +166,7 @@ def start_intervention(cfg, verbose:bool = False):
             """ToDo: Ask operator if they want to continue from a specific stim idx"""
             stim_number = ask_user_for_stimulation_idx(cfg)
         else:
-            """Select condition which as not been stimulated before"""
+            """Select condition which has not been stimulated before"""
             already_stimulated_conditions = set([x['condition_idx'] for x in load_list(protocol_path)])
             conditions_idx_not_done = list(set(range(0,len(conditions)))-already_stimulated_conditions)
             conditions_not_done = [conditions[condition_idx] for condition_idx in conditions_idx_not_done]
@@ -180,14 +176,18 @@ def start_intervention(cfg, verbose:bool = False):
         """Select random condition"""
         condition = random_condition(conditions)
         stim_number = 0
-    condition_idx = condition['index']
-    run_length = int(cfg['main']['run_length'])
-
     """Protocol that the condition has been stimulated"""
     protocol_attempt(condition['index'], protocol_path, stim_number)
+    return condition, stim_number
+
+#%%
+def start_intervention(cfg, condition, stim_number, verbose:bool = False):
+    RMT = get_RMT(max_percent_RMT = 120)
+    run_length = int(cfg['main']['run_length'])
+    condition_idx = condition['index']
 
     """Save the condition"""
-    condition_order_directory = cfg['main']['recordings_path']+"sub-"+subject_token+'\\condition_%s\\config\\' % condition_idx
+    condition_order_directory = cfg['main']['recordings_path']+"\\"+cfg['general']['subject_token']+'\\condition_%s\\config\\' % condition_idx
     condition_order_file_path = condition_order_directory+'config.json'
     try:
         with open(condition_order_file_path) as json_file:
@@ -214,7 +214,7 @@ def start_intervention(cfg, verbose:bool = False):
 
     streamargs = [{'name':"eego"}]
 
-    session = Session(prefix=subject_token,
+    session = Session(prefix=cfg['general']['subject_token'],
                       streamargs=streamargs)
 
     """Define stimulation intensity"""

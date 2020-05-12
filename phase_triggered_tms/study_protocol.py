@@ -48,14 +48,6 @@ def random_condition(conditions):
     condition = conditions[conditions_idx]
     return condition
 
-def get_subject_token():
-    """Get a subject token in format VvNn from user input"""
-    while True:
-        subject_token = input("Please enter subject token: ")
-        if re.match(r'^[A-Z][a-z][A-Z][a-z]$', subject_token):
-            break
-    return subject_token
-
 def get_RMT(max_percent_RMT:int):
     """Get the RMT from user input"""
     while True:

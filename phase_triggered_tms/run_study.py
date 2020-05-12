@@ -5,6 +5,19 @@ Created on Wed Feb 19 08:40:27 2020
 @author: Ethan
 
 """
+"""set up the trial information, after running it , Please common it"""
+import configparser
+from phase_triggered_tms import study_protocol as study
+cfg = configparser.ConfigParser()
+cfg.read(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini")
+condition, _ = study.get_condition(cfg)
+cfg['general']['condition'] = str([condition])
+with open(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", "w",) as configfile:
+    cfg.write(configfile)
+print('')
+del cfg, condition
+
+#%%
 import re
 import time
 import reiz
@@ -22,12 +35,10 @@ from phase_triggered_tms.tms_preparation.configure import Environment
 from luckyloop.client import LuckyClient
 import arduino.onebnc
 
-
 #%% Preparation for the recording
 cfg = configparser.ConfigParser()
 cfg.read(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini")
-with open(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", "w",) as configfile:
-    cfg.write(configfile)
+condition = literal_eval(cfg['general']['condition'])[0]
 
 streamargs = [{'name':"localite_marker"},   # comments: make a real list
               {'name':"reiz-marker"},
@@ -37,7 +48,7 @@ streamargs = [{'name':"localite_marker"},   # comments: make a real list
               #{'name':"GDX-RB_0K2002A1"}
               ]
 
-session = Session(prefix=cfg['general']['subject_token'],
+session = Session(prefix=cfg['general']['subject_token'] + '\\condition_' + str(condition['index']),
                       streamargs=streamargs,
                       mainfolder = cfg['main']['recordings_path'])
 
@@ -56,20 +67,20 @@ with session("resting_state_pre"):
 	REST.start(trials=5)
 
 #%% Slalom calibration (Pre-measurement)
-sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
+sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_cal_pre"):
     sl.calibrate()
 
 #%% Slalom test (Pre-measurement)
-sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
+sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_test_pre"):
     sl.test()
 
 #%% Slalom test (Pre-measurement)
-sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
+sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_pre"):
     sl.run()
-
+    
 #%% Brain machine interface (Pre-measurement)
 with session("bmi_pre"):
     BMI.bmi_main()
@@ -149,13 +160,24 @@ with session('CSE_120_pre'):
 Main intervention (around 45 minutes)
 """
 #%% Intervention (main study)
-start_intervention(cfg, verbose = True)
+condition, stim_number = study.get_condition(cfg)
+if condition['index'] != literal_eval(cfg['general']['condition'])[0]['index']:
+    print('Are you sure?')
+    protocol_file_name = "protocol.list"
+    subject_token = cfg['general']['subject_token']
+    subject_folder = f"{cfg['main']['recordings_path']}\\{cfg['general']['subject_token']}\\"
+    protocol_path = f"{subject_folder}{protocol_file_name}"
+    protocol = load_list(protocol_path)
+    if protocol:
+        protocol.remove(protocol[-1])
+        save_list(protocol_path, protocol)
+else:
+    start_intervention(cfg, condition, stim_number, verbose = True)
 
 #%%
 """
 First post physiological measurements
 """
-
 #%% Resting state (Post-measurement)
 with session("resting_state_post"):
 	REST.start(trials=5)
@@ -181,15 +203,15 @@ with session('CSE_120_post_first'):
 Post behaviral measurements (around 1 hour)
 """
 #%% Slalom calibration (Post-measurement)
-sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
+sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_cal_post"):
     sl.calibrate()
 
 #%% Slalom test (Post-measurement)
-sl = Slalom(cfgpath = r'C:\projects\pranayama\prana\cfg.ini', outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
+sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_post"):
     sl.run()
-
+    
 #%% Brain machine interface (Post-measurement)
 with session("bmi_post"):
     BMI.bmi_main()

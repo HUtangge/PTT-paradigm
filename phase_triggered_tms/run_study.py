@@ -14,7 +14,7 @@ condition, _ = study.get_condition(cfg)
 cfg['general']['condition'] = str([condition])
 with open(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", "w",) as configfile:
     cfg.write(configfile)
-print('')
+print('Today is going to measure condition ' + str(condition['index']) + ' for subject ' + cfg['general']['subject_token'])
 del cfg, condition
 
 #%%
@@ -22,9 +22,10 @@ import re
 import time
 import reiz
 import configparser
+from ast import literal_eval
 from localite.coil import Coil
 from phase_triggered_tms.pre_post import REST, BMI
-from phase_triggered_tms.study_protocol import start_intervention
+from phase_triggered_tms.study_protocol import *
 import liesl
 from liesl.streams import localhostname
 from liesl.files.session import Recorder, Session
@@ -32,6 +33,7 @@ from slalom.slalom_class import Slalom
 #import sys
 #sys.path.append(r'C:\Users\Messung\Desktop\study-phase-triggered-TMS\TMS_experiment_preparation')
 from phase_triggered_tms.tms_preparation.configure import Environment
+from phase_triggered_tms import study_protocol as study
 from luckyloop.client import LuckyClient
 import arduino.onebnc
 

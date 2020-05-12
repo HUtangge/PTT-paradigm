@@ -197,6 +197,7 @@ def start_intervention(cfg, condition, stim_number, verbose:bool = False):
         stimuli = stimuli[stim_number:]
     except:
         stimuli = create_stim_list(condition, cfg)
+        print('create new condition file')
         break_idx, timeleft = create_break_idx_timeleft(stimuli, condition, run_length)
         os.makedirs(condition_order_directory)
         with open(condition_order_file_path,'w') as file:

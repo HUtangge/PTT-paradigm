@@ -37,7 +37,7 @@ from phase_triggered_tms import study_protocol as study
 from luckyloop.client import LuckyClient
 import arduino.onebnc
 
-#%% Preparation for the recording
+# Preparation for the recording
 cfg = configparser.ConfigParser()
 cfg.read(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini")
 condition = literal_eval(cfg['general']['condition'])[0]

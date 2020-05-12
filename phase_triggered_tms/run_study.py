@@ -39,6 +39,7 @@ import arduino.onebnc
 cfg = configparser.ConfigParser()
 cfg.read(r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini")
 condition = literal_eval(cfg['general']['condition'])[0]
+print(condition)
 
 streamargs = [{'name':"localite_marker"},   # comments: make a real list
               {'name':"reiz-marker"},
@@ -162,15 +163,14 @@ Main intervention (around 45 minutes)
 #%% Intervention (main study)
 condition, stim_number = study.get_condition(cfg)
 if condition['index'] != literal_eval(cfg['general']['condition'])[0]['index']:
-    print('Are you sure?')
+    print('Are you sure? Please re-run')
     protocol_file_name = "protocol.list"
     subject_token = cfg['general']['subject_token']
     subject_folder = f"{cfg['main']['recordings_path']}\\{cfg['general']['subject_token']}\\"
     protocol_path = f"{subject_folder}{protocol_file_name}"
     protocol = load_list(protocol_path)
-    if protocol:
-        protocol.remove(protocol[-1])
-        save_list(protocol_path, protocol)
+    protocol.remove(protocol[-1])
+    save_list(protocol_path, protocol)
 else:
     start_intervention(cfg, condition, stim_number, verbose = True)
 

@@ -99,17 +99,16 @@ def wait_for_trigger(coil:Coil,
     return response
 
 def create_marker(response, coil, emg_labels, labels):
-    amplitude, position = coil.amplitude, coil.position
+    position = coil.position
     Vpp= {}
     for idx, lbl in enumerate(emg_labels):
         vpp = response.get_vpp(channel_idx=63+idx)
         Vpp[lbl] = vpp
 
     if position is None:
-#        reiz.audio.library.dong.play()
-        response_marker = {'amplitude':amplitude, 'x':None, 'y': None, 'z':None, **Vpp}
+        response_marker = {'x':None, 'y': None, 'z':None, **Vpp}
     else:
-        response_marker = {'amplitude':amplitude, **position, **Vpp}
+        response_marker = {**position, **Vpp}
 
     return response_marker
 
@@ -119,6 +118,7 @@ def find_highest(collection, channel='EDC_L'):
     amps = [vals[s] for s in shuffler]
     pos = [(collection[s]['x'], collection[s]['y'], collection[s]['z']) for s in shuffler]
     return amps, pos, shuffler
+
 # %% init messages
 entamp = Message('Enter an amplitude and confirm')
 ready = Message('ready')
@@ -136,6 +136,7 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
     coil, marker, buffer, lucky = env.coil, env.marker, env.buffer, env.lucky
     task = Message(task_description)
     time.sleep(0.1)
+
 
     plt.close('all')
     def create_hotspot_canvas(emg_labels):
@@ -169,13 +170,17 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             ax.set_xlim(xlim)
             ax.set_xticklabels(xticklabels)
         plt.show()
-
     task.play_blocking()
 
-    stimulation_amplitude = coil.amplitude
-    if stimulation_amplitude == 0:
+    if coil.amplitude == 0:
         entamp.play_blocking()
         response = manual_trigger(coil, marker, buffer)
+        #coil.amplitude = amplitude
+        amplitude = coil.amplitude
+        amplitude = coil.amplitude
+    else:
+        amplitude = coil.amplitude
+        amplitude = coil.amplitude
 
     counter = 0
     collection = []
@@ -187,7 +192,7 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             if counter == 0:
                 coil.amplitude = 0
                 manual_trigger(coil, marker, buffer)
-                coil.amplitude = stimulation_amplitude
+                coil.amplitude = amplitude
             time.sleep(isi[0]+ (random.random()*(isi[1]-isi[0])))
             response = auto_trigger(coil, lucky, marker, buffer)
             print('go to next auto trigger')
@@ -199,10 +204,6 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             response = manual_trigger(coil, marker, buffer)
             if run_automatic:
                 automatic = True
-
-#        stimulation_amplitude = coil.amplitude
-#        if stimulation_amplitude == 0:
-#            break
 
         response_marker = create_marker(response, coil, emg_labels, labels)
         coil_message = json.loads(response.as_json(channel_idx=labels.index(env.channel_of_interest)))
@@ -265,10 +266,15 @@ def measure_rmt(channel='EDC_L',  threshold_in_uv=50,
 
     task.play_blocking()
 
-    stimulation_amplitude = coil.amplitude
-    if stimulation_amplitude == 0:
+    if coil.amplitude == 0:
         entamp.play_blocking()
         response = manual_trigger(coil, marker, buffer)
+        #coil.amplitude = amplitude
+        amplitude = coil.amplitude
+        amplitude = coil.amplitude
+    else:
+        amplitude = coil.amplitude
+        amplitude = coil.amplitude
 
     amplitude_response = defaultdict(list)
     automatic = False
@@ -277,12 +283,20 @@ def measure_rmt(channel='EDC_L',  threshold_in_uv=50,
             ready.play_blocking()
             response = manual_trigger(coil, marker, buffer)
             automatic = True
+            amplitude_count = True
         else:
             time.sleep(isi[0]+ (random.random()*(isi[1]-isi[0])))
             response = auto_trigger(coil, lucky, marker, buffer)
+            amplitude_count = False
 
-        stimulation_amplitude = coil.amplitude
-        if stimulation_amplitude == 0:
+        if amplitude_count:
+            amplitude = coil.amplitude
+            amplitude = coil.amplitude
+            trial_amplitude = amplitude
+        else:
+            amplitude = trial_amplitude
+
+        if amplitude == 0:
             break
 
         # show and save result
@@ -292,14 +306,14 @@ def measure_rmt(channel='EDC_L',  threshold_in_uv=50,
                           mepmin = coil_message['mepmin'],
                           mepmax = coil_message['mepmax'])
         vpp = response.get_vpp(labels.index(channel))
-        amplitude_response[stimulation_amplitude].append(vpp)
+        amplitude_response[amplitude].append(vpp)
         show(response, labels)
-        count = len(amplitude_response[stimulation_amplitude])
+        count = len(amplitude_response[amplitude])
         props = dict(boxstyle='round', facecolor='white', alpha=1)
-        ax.text(-.025, 1, f'#{count} at {stimulation_amplitude}%', transform=ax.transAxes, fontsize=14,
+        ax.text(-.025, 1, f'#{count} at {amplitude}%', transform=ax.transAxes, fontsize=14,
                 verticalalignment='top', bbox=props)
         # analyse results
-        vals = amplitude_response[stimulation_amplitude]
+        vals = amplitude_response[amplitude]
         above = [v>=threshold_in_uv for v in vals]
         cut_off = (max_trials_per_amplitude//2)
         above_rmt = sum(above) > cut_off
@@ -310,25 +324,27 @@ def measure_rmt(channel='EDC_L',  threshold_in_uv=50,
         # to start_confirmed, and requires manual setting
         if above_rmt or below_rmt: #also evaluates true if more than max_trials
             percent = sum(above)/len(above)
-            perccue = Message('{0} creates {1:2.0f} percent'.format(stimulation_amplitude, percent*100))
+            perccue = Message('{0} creates {1:2.0f} percent'.format(amplitude, percent*100))
             perccue.play_blocking()
             automatic = False
         elif len(above) == max_trials_per_amplitude: #that means 50/50
-            perfcue = Message('{0} is perfect'.format(stimulation_amplitude))
+            perfcue = Message('{0} is perfect'.format(amplitude))
             perfcue.play_blocking()
             automatic = False
         for key in sorted(amplitude_response.keys()):
             vals = amplitude_response[key]
             print('{0} -> {1:3.2f} ({2})'.format(key, sum(vals)/len(vals), vals))
+        coil.amplitude = amplitude
 
     run_ended.play_blocking()
     time.sleep(2)
     return amplitude_response
 
-# %%
-def free_mode(autotrigger=5, channel='EDC_L', isi=(3.5,4.5),
-              task_description = 'Start free Modes',
+#%%
+def free_mode(trials=40, isi=(3.5,4.5), channel='chan_13',
+              task_description='Start free Modes',
               env=None):
+
     labels = env.labels
     coil, marker, buffer, lucky = env.coil, env.marker, env.buffer, env.lucky
     task = Message(task_description)
@@ -363,50 +379,55 @@ def free_mode(autotrigger=5, channel='EDC_L', isi=(3.5,4.5),
 
     task.play_blocking()
 
-    stimulation_amplitude = coil.amplitude
-    if stimulation_amplitude == 0:
+    if coil.amplitude == 0:
         entamp.play_blocking()
         response = manual_trigger(coil, marker, buffer)
+        #coil.amplitude = amplitude
+        amplitude = coil.amplitude
+        amplitude = coil.amplitude
+    else:
+        amplitude = coil.amplitude
+        amplitude = coil.amplitude
 
+    counter = 0
+    amplitude_response = defaultdict(list)
     automatic = False
-    tix_counts = defaultdict(list)
-    if not autotrigger:
-        ready.play_blocking()
-    while True:
+    while counter < trials:
         if not automatic:
-            if autotrigger:
-                ready.play_blocking()
+            ready.play_blocking()
             response = manual_trigger(coil, marker, buffer)
-            if autotrigger:
-                automatic = True
+            automatic = True
+            amplitude_count = True
         else:
             time.sleep(isi[0]+ (random.random()*(isi[1]-isi[0])))
             response = auto_trigger(coil, lucky, marker, buffer)
+            amplitude_count = False
 
-        # show result
-        coil.set_response(response, channel_idx=env.labels.index(channel))
+        if amplitude_count:
+            amplitude = coil.amplitude
+            amplitude = coil.amplitude
+            trial_amplitude = amplitude
+        else:
+            amplitude = trial_amplitude
+
+        # show and save result
+        coil_message = json.loads(response.as_json(channel_idx=labels.index(channel)))
+        coil.set_response(mepmaxtime = coil_message['mepmaxtime'],
+                          mepamplitude = coil_message['mepamplitude'],
+                          mepmin = coil_message['mepmin'],
+                          mepmax = coil_message['mepmax'])
+        vpp = response.get_vpp(labels.index(channel))
+        amplitude_response[amplitude].append(vpp)
         show(response, labels)
-        # count up
-        tix = coil.target_index
-        count = tix_counts.get(tix, 0)
-        count += 1
-        tix_counts[tix] = count
-        if count >= autotrigger:
-            automatic = False
-        # and show
         props = dict(boxstyle='round', facecolor='white', alpha=1)
-        ax.text(-.025, 1, f'#{count} at {tix}', transform=ax.transAxes, fontsize=14,
+        counter  += 1
+        print(f'this is the {counter} trial')
+        ax.text(-.025, 1, f'{counter} of {trials}', transform=ax.transAxes, fontsize=14,
                 verticalalignment='top', bbox=props)
-        plt.pause(0.01)
-
-        amplitude = coil.amplitude
-        if amplitude == 0:
-            break
-
+        plt.pause(0.05)
+        coil.amplitude = amplitude
     run_ended.play_blocking()
     time.sleep(2)
-
-
 
 #%% TG: test coil trigger
 def test():
@@ -429,5 +450,14 @@ def test():
         push_time = time.time()
         time.sleep(4)
         delay_coil.append(push_time - stop)
+
+
+    for i in range(100):
+        print(i)
+        time.sleep(1)
+        coil.amplitude = amplitude
+        amplitude = coil.amplitude
+        lucky.trigger()
+        print(amplitude)
 
 

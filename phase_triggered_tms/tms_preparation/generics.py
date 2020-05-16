@@ -341,7 +341,7 @@ def measure_rmt(channel='EDC_L',  threshold_in_uv=50,
     return amplitude_response
 
 #%%
-def free_mode(trials=40, isi=(3.5,4.5), channel='chan_13',
+def free_mode(trials=40, isi=(3.5,4.5), channel='EDC_L',
               task_description='Start free Modes',
               env=None):
 

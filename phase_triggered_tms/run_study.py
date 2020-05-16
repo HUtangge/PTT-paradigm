@@ -83,7 +83,7 @@ with session("slalom_test_pre"):
 sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_pre"):
     sl.run()
-    
+
 #%% Brain machine interface (Pre-measurement)
 with session("bmi_pre"):
     BMI.bmi_main()
@@ -102,11 +102,10 @@ env.lucky = arduino.onebnc.Arduino()
 env.buffer = liesl.RingBuffer(env.bvr, duration_in_ms=2000)
 env.channel_of_interest = 'chan_13'
 env.setup()
-env.emg_labels = env.emg_labels[12:16]
+env.emg_labels = env.emg_labels[12:15]
 
 from phase_triggered_tms.tms_preparation.generics import search_hotspot, find_highest
-from phase_triggered_tms.tms_preparation.generics import measure_rmt
-from phase_triggered_tms.tms_preparation.generics import free_mode
+from phase_triggered_tms.tms_preparation.generics import measure_rmt, free_mode
 
 #%% hotspot detection
 with session("hotspot-detection"):
@@ -144,19 +143,19 @@ Pre physiological measurements
 """
 #%% SICI (Pre-measurement)
 with session('SICI_pre'):
-    SICI_collections = search_hotspot(trials=10, task_description='SICI measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='SICI measurement', env=env)
 
 #%% ICF (Pre-measurement)
 with session('ICF_pre'):
-    ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='ICF measurement', env=env)
 
 #%% CSE_100 (Pre-measurement)
 with session('CSE_100_pre'):
-    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
 
 #%% CSE_120 (Pre-measurement)
 with session('CSE_120_pre'):
-    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
 
 #%%
 """
@@ -186,19 +185,19 @@ with session("resting_state_post"):
 
 #%% SICI (Post-measurement)
 with session('SICI_post_first'):
-    SICI_collections = search_hotspot(trials=10, task_description='SICI measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='SICI measurement', env=env)
 
 #%% ICF (Post-measurement)
 with session('ICF_post_first'):
-    ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='ICF measurement', env=env)
 
 #%% CSE_100 (Post-measurement)
 with session('CSE_100_post_first'):
-    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
 
 #%% CSE_120 (Post-measurement)
 with session('CSE_120_post_first'):
-    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
 
 #%%
 """
@@ -213,7 +212,7 @@ with session("slalom_cal_post"):
 sl = Slalom(cfgpath = r"C:\Users\Messung\Desktop\study-phase-triggered-TMS\phase_triggered_tms\cfg.ini", outdir = cfg['main']['recordings_path'] + '/' + cfg['general']['subject_token'])
 with session("slalom_post"):
     sl.run()
-    
+
 #%% Brain machine interface (Post-measurement)
 with session("bmi_post"):
     BMI.bmi_main()
@@ -224,19 +223,19 @@ Second post physiological measurements
 """
 #%% SICI (Post-measurement)
 with session('SICI_post_second'):
-    SICI_collections = search_hotspot(trials=10, task_description='SICI measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='SICI measurement', env=env)
 
 #%% ICF (Post-measurement)
 with session('ICF_post_second'):
-    ICF_collections = search_hotspot(trials=10, task_description='ICF measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='ICF measurement', env=env)
 
 #%% CSE_100 (Post-measurement)
 with session('CSE_100_post_second'):
-    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
 
 #%% CSE_120 (Post-measurement)
 with session('CSE_120_post_second'):
-    SICI_collections = search_hotspot(trials=10, task_description='CSE measurement', env=env, run_automatic=True)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
 
 """
 Experiment ended

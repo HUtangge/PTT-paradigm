@@ -98,7 +98,7 @@ def wait_for_trigger(coil:Coil,
                         post_in_ms = 100)
     return response
 
-def create_marker(response, coil, emg_labels, labels):
+def create_marker(response, coil, emg_labels, labels, amplitude):
     position = coil.position
     Vpp= {}
     for idx, lbl in enumerate(emg_labels):
@@ -106,9 +106,9 @@ def create_marker(response, coil, emg_labels, labels):
         Vpp[lbl] = vpp
 
     if position is None:
-        response_marker = {'x':None, 'y': None, 'z':None, **Vpp}
+        response_marker = {'amplitude':amplitude, 'x':None, 'y': None, 'z':None, **Vpp}
     else:
-        response_marker = {**position, **Vpp}
+        response_marker = {'amplitude':amplitude, **position, **Vpp}
 
     return response_marker
 
@@ -205,7 +205,7 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             if run_automatic:
                 automatic = True
 
-        response_marker = create_marker(response, coil, emg_labels, labels)
+        response_marker = create_marker(response, coil, emg_labels, labels, amplitude)
         coil_message = json.loads(response.as_json(channel_idx=labels.index(env.channel_of_interest)))
         print('before push')
         coil.set_response(mepmaxtime = coil_message['mepmaxtime'],

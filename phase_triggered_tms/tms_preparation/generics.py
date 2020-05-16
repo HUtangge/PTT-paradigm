@@ -89,7 +89,7 @@ def wait_for_trigger(coil:Coil,
         chunk, tstamps = buffer.get()
         time.sleep(0.05)
     print(']')
-
+    chunk = chunk*1e6
     # create and return the response
     response = Response(chunk=chunk,
                         tstamps=tstamps,

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import time
 import random
 import reiz
+from reiz.marker import push
 from reiz.audio import Message
 from collections import defaultdict
 from localite.api import Coil
@@ -104,12 +105,10 @@ def create_marker(response, coil, emg_labels, labels, amplitude):
     for idx, lbl in enumerate(emg_labels):
         vpp = response.get_vpp(channel_idx=63+idx)
         Vpp[lbl] = vpp
-
     if position is None:
         response_marker = {'amplitude':amplitude, 'x':None, 'y': None, 'z':None, **Vpp}
     else:
         response_marker = {'amplitude':amplitude, **position, **Vpp}
-
     return response_marker
 
 def find_highest(collection, channel='EDC_L'):
@@ -136,7 +135,6 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
     coil, marker, buffer, lucky = env.coil, env.marker, env.buffer, env.lucky
     task = Message(task_description)
     time.sleep(0.1)
-
 
     plt.close('all')
     def create_hotspot_canvas(emg_labels):
@@ -201,7 +199,12 @@ def search_hotspot(trials=40, isi=(3.5,4.5),
             if not has_started:
                 ready.play_blocking()
                 has_started = True
+            coil.amplitude = amplitude
             response = manual_trigger(coil, marker, buffer)
+            hotspot_amplitude = coil.amplitude
+            hotspot_amplitude = coil.amplitude
+            if amplitude != hotspot_amplitude:
+                amplitude = hotspot_amplitude
             if run_automatic:
                 automatic = True
 
@@ -392,14 +395,16 @@ def free_mode(trials=40, isi=(3.5,4.5), channel='EDC_L',
     counter = 0
     amplitude_response = defaultdict(list)
     automatic = False
+    timer = []
     while counter < trials:
+        start = time.time()
         if not automatic:
             ready.play_blocking()
             response = manual_trigger(coil, marker, buffer)
             automatic = True
             amplitude_count = True
         else:
-            time.sleep(isi[0]+ (random.random()*(isi[1]-isi[0])))
+            time.sleep(isi[0] - 2 + (random.random()*(isi[1]-isi[0])))
             response = auto_trigger(coil, lucky, marker, buffer)
             amplitude_count = False
 

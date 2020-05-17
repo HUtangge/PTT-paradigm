@@ -396,9 +396,7 @@ def free_mode(trials=10, isi=(3.5,4.5), channel='EDC_L',
     counter = 0
     amplitude_response = defaultdict(list)
     automatic = False
-    timer = []
     while counter < trials:
-        start = time.time()
         if not automatic:
             response = auto_trigger(coil, lucky, marker, buffer)
             automatic = True

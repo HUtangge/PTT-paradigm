@@ -108,8 +108,9 @@ from phase_triggered_tms.tms_preparation.generics import search_hotspot, find_hi
 from phase_triggered_tms.tms_preparation.generics import measure_rmt, free_mode
 
 #%% hotspot detection
+"""in Mode N"""
 with session("hotspot-detection"):
-    collection = search_hotspot(trials=40, env=env, run_automatic=True)
+    collection = search_hotspot(trials=40, env=env, run_automatic=False)
 
 try:
     amp, pos, sorter  = find_highest(collection, channel=env.channel_of_interest)
@@ -119,6 +120,7 @@ except IndexError as e: #aborted run
     raise IndexError('Not enough runs for evaluation' + str(e))
 
 #%% hotspot iteration
+"""in Mode N"""
 with session("hotspot-iteration"):
     collection = []
     for candidate in range(0,3,1):
@@ -133,6 +135,7 @@ except IndexError as e: #aborted run
     raise IndexError('Not enough runs for evaluation' + str(e))
 
 #%% Resting motor threshold
+"""in Mode N"""
 with session("measure-rmt"):
     results = measure_rmt(channel = env.channel_of_interest,  threshold_in_uv=50,
                           max_trials_per_amplitude=10, env=env)
@@ -142,20 +145,24 @@ with session("measure-rmt"):
 Pre physiological measurements
 """
 #%% SICI (Pre-measurement)
+"""in Mode S"""
 with session('SICI_pre'):
     free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='SICI measurement', env=env)
 
 #%% ICF (Pre-measurement)
+"""in Mode F"""
 with session('ICF_pre'):
     free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='ICF measurement', env=env)
 
 #%% CSE_100 (Pre-measurement)
+"""in Mode N"""
 with session('CSE_100_pre'):
-    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE 100 measurement', env=env)
 
 #%% CSE_120 (Pre-measurement)
+"""in Mode N"""
 with session('CSE_120_pre'):
-    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE 120 measurement', env=env)
 
 #%%
 """
@@ -184,20 +191,24 @@ with session("resting_state_post"):
 	REST.start(trials=5)
 
 #%% SICI (Post-measurement)
+"""in Mode S"""
 with session('SICI_post_first'):
     free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='SICI measurement', env=env)
 
 #%% ICF (Post-measurement)
+"""in Mode F"""
 with session('ICF_post_first'):
     free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='ICF measurement', env=env)
 
 #%% CSE_100 (Post-measurement)
+"""in Mode N"""
 with session('CSE_100_post_first'):
-    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE 100 measurement', env=env)
 
 #%% CSE_120 (Post-measurement)
+"""in Mode N"""
 with session('CSE_120_post_first'):
-    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE 120 measurement', env=env)
 
 #%%
 """
@@ -222,20 +233,24 @@ with session("bmi_post"):
 Second post physiological measurements
 """
 #%% SICI (Post-measurement)
+"""in Mode S"""
 with session('SICI_post_second'):
     free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='SICI measurement', env=env)
 
 #%% ICF (Post-measurement)
+"""in Mode F"""
 with session('ICF_post_second'):
     free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='ICF measurement', env=env)
 
 #%% CSE_100 (Post-measurement)
+"""in Mode N"""
 with session('CSE_100_post_second'):
-    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE 100 measurement', env=env)
 
 #%% CSE_120 (Post-measurement)
+"""in Mode N"""
 with session('CSE_120_post_second'):
-    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE measurement', env=env)
+    free_mode(trials=10, isi=(3.5,4.5), channel = env.channel_of_interest, task_description='CSE 120 measurement', env=env)
 
 """
 Experiment ended
